@@ -1,0 +1,3 @@
+create table thecore(hora TIMESTAMP , temperatura NUMERIC, humedad int );
+create table conversiondolares(dia VARCHAR(10) ,valor  NUMERIC, moneda VARCHAR(10));
+create table conversiondolaresMockup(dia VARCHAR(10) ,valor  NUMERIC, moneda VARCHAR(10));
