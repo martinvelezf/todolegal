@@ -1,7 +1,7 @@
 import flask
 from flask import request
 import os
-import psycopg2
+import sqlite3
 import dweepy
 from json import dumps
 from httplib2 import Http
@@ -9,34 +9,30 @@ from flask import render_template
 import time
 from datetime import datetime
 from threading import Thread
-
+import pandas as pd
 
 datosbot = lambda x: {str(i[0]):{'humedad':str(i[1]),'temperatura':i[2]} for i in x}
 
 
 def run(): 
+    conn = sqlite3.connect("./test.db")
+    cursor = conn.cursor()
     # This might take more than 15 minutes to complete
-    consultar= lambda a:dweepy.get_latest_dweet_for(a)
+    consultar= lambda consulta:dweepy.get_latest_dweet_for(consulta)
+    list=[]
     for i in range(1,16):  
-        a=consultar('thecore')[0]['content']
-        cursor.execute("INSERT INTO thecore(hora, temperatura , humedad) VALUES (%s,%s,%s)", (datetime.now(),a["temperature"],a["humidity"]))
+        fila=consultar('thecore')[0]['content']
+        list.append({'hora':datetime.now(), "temperatura":fila["temperature"] , "humedad":fila["humidity"]})
         time.sleep(60)
-    conn.commit()
+    pd.DataFrame(list).to_sql('thecore', con=conn, if_exists='append') 
     cursor.execute("Select * from thecore ORDER BY hora DESC")
-    a=datosbot(cursor.fetchall())
-    webhook(a)
-"""
-DATABASE_URL = os.environ['DATABASE_URL']
-conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-"""
+    datos_resultado=datosbot(cursor.fetchall())
+    webhook(datos_resultado)
+
 #Conexion de la base en el servidor que no es de heroku
-conn = psycopg2.connect(user="ecxzqtzfjeihgc",
-                                password="618dfca07119f8cf853cd7e9985ed4d7701c8bf4412804c8644f4120e04f03cb",
-                                host="ec2-35-153-12-59.compute-1.amazonaws.com",
-                                port="5432",
-                                database="deeuk8ikachdv6")
-#"""
-cursor = conn.cursor()
+conn = sqlite3.connect("./test.db")
+
+
 
 def datosmoneda(x):
     msg={'argetina':{},'chile':{},'euro':{}}
@@ -48,16 +44,15 @@ def datosmoneda2(x):
         moneda='cambio de moneda %s a USD'%x[0][2]
         msg={moneda:{}}
         for i in x:
-            msg[moneda].update({str(i[0]):str(i[1])})
-            
+            msg[moneda].update({str(i[0]):str(i[1])})   
         return msg
     except:
         return "No existe valores"
 app= flask.Flask(__name__)
 
 def webhook(msg):
-    url = 'https://webhook.site/e1c8e1e6-e06c-4e1c-8a2c-176eb1a4f634' #link todo legal
-    url1='https://webhook.site/4cb7980d-edf2-4ebc-b19f-92e34aeb7719' #link myhook
+    url = 'https://webhook.site/4ed54cff-41ba-423e-9f46-b2c87408daf9' 
+    my_url='https://webhook.site/40f548cb-15f5-40b1-8b72-9015467ae9ed' #link myhook
     message_headers = {'Content-Type': 'application/json; charset=UTF-8'}
     http_obj = Http()
     response = http_obj.request(
@@ -67,7 +62,7 @@ def webhook(msg):
         body=dumps(msg),
     )
     response = http_obj.request(
-        uri=url1,
+        uri=my_url,
         method='POST',
         headers=message_headers,
         body=dumps(msg),
@@ -77,28 +72,37 @@ def Home():
     return render_template('main.html')
 @app.route('/1')
 def Uno():
-    cursor.execute("Select * from conversiondolares")
+    conn = sqlite3.connect("./test.db")
+    cursor = conn.cursor()
+    cursor.execute("Select dia,valor,moneda from cambio_normal")
     moneda=cursor.fetchall()
     msg=datosmoneda(moneda)
     webhook(msg)
     return msg
 @app.route('/1/<moneda>')
 def Uno1(moneda):
-    cursor.execute("Select * from conversiondolares where moneda='%s'"%moneda)
+    conn = sqlite3.connect("./test.db")
+
+    cursor = conn.cursor()
+    cursor.execute("Select dia,valor,moneda from cambio_normal where moneda='%s'"%(moneda))
     moneda=cursor.fetchall()
     msg=datosmoneda2(moneda)
     webhook(msg)
     return msg
 @app.route('/2')
 def Dos():
-    cursor.execute("Select * from conversiondolaresMockup")
+    conn = sqlite3.connect("./test.db")
+    cursor = conn.cursor()
+    cursor.execute("Select dia,valor,moneda from cambio_artificial")
     moneda=cursor.fetchall()
     msg=datosmoneda(moneda)
     webhook(msg)
     return msg
 @app.route('/2/<moneda>')
 def Dos2(moneda):
-    cursor.execute("Select * from conversiondolaresMockup where moneda='%s'"%moneda)
+    conn = sqlite3.connect("./test.db")
+    cursor = conn.cursor()
+    cursor.execute("Select dia,valor,moneda from cambio_artificial where '%s'"%(moneda))
     moneda=cursor.fetchall()
     msg=datosmoneda2(moneda)
     webhook(msg)
@@ -106,12 +110,11 @@ def Dos2(moneda):
 
 @app.route('/3')
 def Tres():
-    cursor.execute("Select * from thecore ORDER BY hora DESC LIMIT 15")
-    msg=datosbot(cursor.fetchall())
     thread = Thread(target=run)
     thread.daemon = True
     thread.start()
-    return msg
+    conn = sqlite3.connect("./test.db")
+    return "Se ha enviado al webhook"
 
 
 if __name__ == '__main__':

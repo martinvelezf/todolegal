@@ -2,5 +2,5 @@ dweepy
 flask
 pandas
 gunicorn
-psycopg2-binary
+sqlite3
 httplib2 

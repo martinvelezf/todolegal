@@ -1,10 +1,23 @@
-# todolegal
-correr: pyhon3 app.py
+# Ejericio de desarrollo
 
-archivos adicionales
+Se dibidio en diferentes archivos las semillas de la base de datos
 
-mockupgenerator.py genera un dataset
+al ejecutar mockupgenerator.py, se genera los registros artificiales
 
-valorescambiointernet.py lee un data set del internet
+el segundo archivo py revisa csv descargados de yahoo, con los valorescambiointernet.py 
 
-Tables Database contiene las tablas
+el tercero en un revidor flask,, con los resultados de las consultas en la base de datos.py
+
+
+## Orden de ejecucion
+
+Primero en un entorno virtual de python3
+
+>>pip install -r requirements.txt
+
+>>python mockup_generator.py
+
+>>python cambio_yahoo.py
+
+## Finalmente ejecutar el servidor web
+>>pyhon app.py
