@@ -21,3 +21,6 @@ Primero en un entorno virtual de python3
 
 ## Finalmente ejecutar el servidor web
 >>pyhon app.py
+
+
+** Se necesita instalar sqlite3 en su equipo que se use con servidor
